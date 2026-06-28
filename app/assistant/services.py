@@ -11,10 +11,11 @@ import uuid
 
 
 async def get_assistant_response(
-    user_id: int,
+    user_id: str,
     role: str,
     conversation_id: str,
-    message: str
+    message: str,
+    context: str = ""
 ):
     role_prompt = ""
 
@@ -50,16 +51,21 @@ User: {chat.get('user_message', '')}
 Assistant: {chat.get('assistant_response', '')}
 """
 
+    role_formatted = role.upper() if role.lower() == "hr" else role.capitalize()
+
     prompt = f"""
     {ASSISTANT_SYSTEM_PROMPT}
 
     {role_prompt}
 
+    Live Data Context:
+    {context}
+
     Previous Conversation:
     {previous_messages}
 
     User ID: {user_id}
-    Role: {role}
+    Role: {role_formatted}
     Conversation ID: {conversation_id}
 
     User Message:
@@ -97,7 +103,7 @@ Assistant: {chat.get('assistant_response', '')}
 
 
 async def create_new_conversation(
-    user_id: int,
+    user_id: str,
     role: str
 ):
     conversation_id = str(uuid.uuid4())
@@ -116,7 +122,7 @@ async def create_new_conversation(
 
 
 async def delete_conversation(
-    user_id: int,
+    user_id: str,
     conversation_id: str
 ):
     result = db["conversations"].delete_one(
@@ -133,7 +139,7 @@ async def delete_conversation(
 
 
 async def get_conversation_history(
-    user_id: int,
+    user_id: str,
     conversation_id: str
 ):
     conversation = db["conversations"].find_one(
@@ -150,7 +156,7 @@ async def get_conversation_history(
 
 
 async def rename_conversation(
-    user_id: int,
+    user_id: str,
     conversation_id: str,
     title: str
 ):
@@ -173,7 +179,7 @@ async def rename_conversation(
 
 
 async def list_conversations(
-    user_id: int
+    user_id: str
 ):
     conversations = db["conversations"].find(
         {

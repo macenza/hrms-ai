@@ -10,10 +10,11 @@ class UserRole(str, Enum):
 
 
 class ChatRequest(BaseModel):
-    user_id: int
+    user_id: str
     role: UserRole
     conversation_id: str
     message: str
+    context: str = ""
 
 
 class ChatResponse(BaseModel):
@@ -24,7 +25,7 @@ class ChatResponse(BaseModel):
 
 
 class NewConversationRequest(BaseModel):
-    user_id: int
+    user_id: str
     role: UserRole
 
 
@@ -33,7 +34,7 @@ class NewConversationResponse(BaseModel):
 
 
 class DeleteConversationRequest(BaseModel):
-    user_id: int
+    user_id: str
     conversation_id: str
 
 
@@ -42,7 +43,7 @@ class DeleteConversationResponse(BaseModel):
 
 
 class ConversationHistoryRequest(BaseModel):
-    user_id: int
+    user_id: str
     conversation_id: str
 
 
@@ -52,7 +53,7 @@ class ConversationHistoryResponse(BaseModel):
 
 
 class RenameConversationRequest(BaseModel):
-    user_id: int
+    user_id: str
     conversation_id: str
     title: str
 
@@ -61,7 +62,7 @@ class RenameConversationResponse(BaseModel):
     message: str
 
 class ListConversationsRequest(BaseModel):
-    user_id: int
+    user_id: str
 
 
 class ListConversationsResponse(BaseModel):
