@@ -9,8 +9,12 @@ _gemini_client = None
 def get_groq_client():
     global _groq_client
     if _groq_client is None:
-        # Check GEMINI_API_KEY first as per original codebase (where Groq was used with GEMINI_API_KEY)
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GROQ_API_KEY")
+        # Only treat GEMINI_API_KEY as Groq if it starts with gsk_
+        api_key = os.getenv("GROQ_API_KEY")
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if gemini_key and gemini_key.startswith("gsk_"):
+            api_key = gemini_key
+            
         if api_key:
             try:
                 from groq import Groq
@@ -57,7 +61,7 @@ def generate_chat_completion(prompt: str, model: str = "llama3-8b-8192", tempera
     gemini_client = get_gemini_client()
     if gemini_client:
         # Map llama model to gemini model
-        gemini_model = "gemini-1.5-flash" if "llama" in model else model
+        gemini_model = "gemini-2.5-flash" if "llama" in model else model
         model_instance = gemini_client.GenerativeModel(gemini_model)
         response = model_instance.generate_content(
             prompt,

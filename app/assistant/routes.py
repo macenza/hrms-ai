@@ -49,7 +49,8 @@ async def assistant_chat(
         request.user_id,
         request.role,
         request.conversation_id,
-        request.message
+        request.message,
+        request.context
     )
 
     return ChatResponse(
