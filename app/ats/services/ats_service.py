@@ -10,7 +10,7 @@ def analyze_resume(resume_text: str) -> dict:
     prompt = ATS_ANALYSIS_PROMPT.format(resume_text=resume_text)
     
     try:
-        content = generate_chat_completion(prompt, model="llama3-8b-8192", temperature=0.3)
+        content = generate_chat_completion(prompt, model="llama-3.3-70b-versatile", temperature=0.3)
         return clean_json_response(content)
     except Exception as e:
         return {

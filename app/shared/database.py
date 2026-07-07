@@ -1,12 +1,12 @@
-from pymongo import MongoClient
 import os
+from pymongo import MongoClient
 from dotenv import load_dotenv
 
 load_dotenv()
 
-mongo_uri = os.getenv("MONGO_URI", "mongodb+srv://macenza:macenza1234@cluster0.z50jiib.mongodb.net/?appName=Cluster0")
-client = MongoClient(mongo_uri)
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+client = MongoClient(MONGO_URI)
 
-db = client["hrms"]
+db = client.get_default_database("hrms")
 
 application_collection = db["applications"]

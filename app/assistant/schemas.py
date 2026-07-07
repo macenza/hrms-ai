@@ -9,6 +9,8 @@ class UserRole(str, Enum):
     manager = "manager"
     hr = "hr"
     admin = "admin"
+    superadmin = "superadmin"
+    platform_owner = "platform_owner"
 
 
 class ChatRequest(BaseModel):
