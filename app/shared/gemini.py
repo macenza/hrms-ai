@@ -61,7 +61,7 @@ def generate_chat_completion(prompt: str, model: str = "llama3-8b-8192", tempera
     gemini_client = get_gemini_client()
     if gemini_client:
         # Map llama model to gemini model
-        gemini_model = "gemini-1.5-flash" if "llama" in model else model
+        gemini_model = "gemini-2.5-flash" if "llama" in model else model
         model_instance = gemini_client.GenerativeModel(gemini_model)
         response = model_instance.generate_content(
             prompt,
