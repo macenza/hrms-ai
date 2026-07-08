@@ -8,10 +8,12 @@ from app.assistant.prompts import (
 )
 from app.shared.database import db
 import uuid
+from typing import Union
+
 
 
 async def get_assistant_response(
-    user_id: str,
+    user_id: Union[str, int],
     role: str,
     conversation_id: str,
     message: str,
@@ -103,7 +105,7 @@ Assistant: {chat.get('assistant_response', '')}
 
 
 async def create_new_conversation(
-    user_id: str,
+    user_id: Union[str, int],
     role: str
 ):
     conversation_id = str(uuid.uuid4())
@@ -122,7 +124,7 @@ async def create_new_conversation(
 
 
 async def delete_conversation(
-    user_id: str,
+    user_id: Union[str, int],
     conversation_id: str
 ):
     result = db["conversations"].delete_one(
@@ -139,7 +141,7 @@ async def delete_conversation(
 
 
 async def get_conversation_history(
-    user_id: str,
+    user_id: Union[str, int],
     conversation_id: str
 ):
     conversation = db["conversations"].find_one(
@@ -156,7 +158,7 @@ async def get_conversation_history(
 
 
 async def rename_conversation(
-    user_id: str,
+    user_id: Union[str, int],
     conversation_id: str,
     title: str
 ):
@@ -179,7 +181,7 @@ async def rename_conversation(
 
 
 async def list_conversations(
-    user_id: str
+    user_id: Union[str, int]
 ):
     conversations = db["conversations"].find(
         {
