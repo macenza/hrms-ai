@@ -79,7 +79,7 @@ Assistant: {chat.get('assistant_response', '')}
     try:
         response = generate_chat_completion(
             prompt,
-            model="llama3-8b-8192",
+            model="llama-3.3-70b-versatile",
             temperature=0.5
         )
 

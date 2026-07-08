@@ -19,7 +19,6 @@ app.include_router(ats_router)
 # Register Assistant routes (prefixed with /assistant)
 app.include_router(assistant_router)
 
-# Live-reload trigger comment
 @app.get("/")
 def home():
     return {"message": "HRMS AI Service Running"}

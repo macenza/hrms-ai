@@ -14,7 +14,7 @@ def analyze_resume(resume_text: str) -> dict:
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            content = generate_chat_completion(prompt, model="llama3-8b-8192", temperature=0.3)
+            content = generate_chat_completion(prompt, model="llama-3.3-70b-versatile", temperature=0.3)
             return clean_json_response(content)
         except Exception as e:
             error_msg = str(e)

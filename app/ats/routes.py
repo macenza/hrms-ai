@@ -79,7 +79,6 @@ async def update_status(app_id: str, body: dict = Body(...)):
         return {"message": "No document updated"}
 
     return {"message": "Status updated successfully"}
-
 @router.post("/ats/screen")
 async def screen_resume(body: dict = Body(...)):
     file_path = body.get("file_path")

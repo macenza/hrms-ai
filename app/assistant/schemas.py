@@ -3,12 +3,13 @@ from enum import Enum
 from typing import Union
 
 
-
 class UserRole(str, Enum):
     employee = "employee"
     manager = "manager"
     hr = "hr"
     admin = "admin"
+    superadmin = "superadmin"
+    platform_owner = "platform_owner"
 
 
 class ChatRequest(BaseModel):
