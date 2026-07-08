@@ -79,3 +79,18 @@ async def update_status(app_id: str, body: dict = Body(...)):
         return {"message": "No document updated"}
 
     return {"message": "Status updated successfully"}
+@router.post("/ats/screen")
+async def screen_resume(body: dict = Body(...)):
+    file_path = body.get("file_path")
+    if not file_path:
+        return {"success": False, "error": "file_path is required"}
+    
+    try:
+        if not os.path.exists(file_path):
+            return {"success": False, "error": f"File does not exist: {file_path}"}
+            
+        resume_text = extract_text(file_path)
+        analysis = analyze_resume(resume_text)
+        return {"success": True, "analysis": analysis}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

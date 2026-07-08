@@ -71,4 +71,4 @@ def generate_chat_completion(prompt: str, model: str = "llama-3.3-70b-versatile"
         )
         return response.text.strip()
 
-    raise ValueError("No valid AI API key or client configured. Check your .env file.")
+    raise ValueError("No valid AI API key or client configured. Check your .env file.")

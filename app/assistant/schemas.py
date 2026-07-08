@@ -3,7 +3,6 @@ from enum import Enum
 from typing import Union
 
 
-
 class UserRole(str, Enum):
     employee = "employee"
     manager = "manager"
