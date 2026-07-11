@@ -1,4 +1,5 @@
 import os
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -9,14 +10,10 @@ _gemini_client = None
 def get_groq_client():
     global _groq_client
     if _groq_client is None:
-        api_key = os.getenv("GROQ_API_KEY")
-        if not api_key:
-            gemini_key = os.getenv("GEMINI_API_KEY", "")
-            if gemini_key.startswith("gsk_"):
-                api_key = gemini_key
-            
-        if api_key:
+        api_key = os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if api_key and api_key.startswith("gsk_"):
             try:
+                # pyrefly: ignore [missing-import]
                 from groq import Groq
                 _groq_client = Groq(api_key=api_key)
             except ImportError:
@@ -27,8 +24,10 @@ def get_gemini_client():
     global _gemini_client
     if _gemini_client is None:
         api_key = os.getenv("GEMINI_API_KEY")
+        # Google API keys usually do not start with gsk_
         if api_key and not api_key.startswith("gsk_"):
             try:
+                # pyrefly: ignore [missing-import]
                 import google.generativeai as genai
                 genai.configure(api_key=api_key)
                 _gemini_client = genai
@@ -41,6 +40,22 @@ def generate_chat_completion(prompt: str, model: str = "llama-3.3-70b-versatile"
     Centralized function to generate chat completions using either Groq or Google Gemini.
     Defaults to Groq, and automatically falls back to Gemini if Groq encounters any issues.
     """
+    from app.shared.database import db
+
+    def track_token_usage(tokens_count: int):
+        try:
+            coll = db["ai_token_tracker"]
+            coll.update_one(
+                {"id": "global_budget"},
+                {
+                    "$inc": {"usedTokens": tokens_count},
+                    "$setOnInsert": {"budget": 1000000}
+                },
+                upsert=True
+            )
+        except Exception as e:
+            print(f"Error tracking token usage: {e}")
+
     # 1. Try Groq (default)
     groq_client = get_groq_client()
     if groq_client:
@@ -55,6 +70,10 @@ def generate_chat_completion(prompt: str, model: str = "llama-3.3-70b-versatile"
                 ],
                 temperature=temperature
             )
+            if hasattr(response, 'usage') and response.usage:
+                tokens = getattr(response.usage, 'total_tokens', 0)
+                if tokens > 0:
+                    track_token_usage(tokens)
             return response.choices[0].message.content.strip()
         except Exception as e:
             print(f"Groq API Error: {e}. Falling back to Gemini...")
@@ -69,6 +88,10 @@ def generate_chat_completion(prompt: str, model: str = "llama-3.3-70b-versatile"
             prompt,
             generation_config={"temperature": temperature}
         )
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            tokens = getattr(response.usage_metadata, 'total_token_count', 0)
+            if tokens > 0:
+                track_token_usage(tokens)
         return response.text.strip()
 
     raise ValueError("No valid AI API key or client configured. Check your .env file.")
