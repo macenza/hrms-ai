@@ -14,41 +14,40 @@ async def get_assistant_response(
     user_id: int,
     role: str,
     conversation_id: str,
-    message: str
-):
+    message: str,
+    context: str = ""
+) -> tuple[str, str | None]:
+    """
+    Returns a tuple of (response_text, updated_title).
+    updated_title is non-None only when a new title was generated this turn.
+    """
     role_prompt = ""
 
     if role.lower() == "employee":
         role_prompt = EMPLOYEE_PROMPT
-
     elif role.lower() == "manager":
         role_prompt = MANAGER_PROMPT
-
     elif role.lower() == "hr":
         role_prompt = HR_PROMPT
-
     elif role.lower() == "admin":
         role_prompt = ADMIN_PROMPT
 
     conversation = db["conversations"].find_one(
-        {
-            "conversation_id": conversation_id,
-            "user_id": user_id
-        }
+        {"conversation_id": conversation_id, "user_id": user_id}
     )
 
     if not conversation:
-        return "Conversation not found"
-
-    previous_messages = ""
+        return "Conversation not found", None
 
     messages = conversation.get("messages", [])
+    message_count = conversation.get("message_count", len(messages))
+    existing_title = conversation.get("title", "New Conversation")
 
+    previous_messages = ""
     for chat in messages[-5:]:
-        previous_messages += f"""
-User: {chat.get('user_message', '')}
-Assistant: {chat.get('assistant_response', '')}
-"""
+        previous_messages += f"User: {chat.get('user_message', '')}\nAssistant: {chat.get('assistant_response', '')}\n"
+
+    context_str = f"\nContext/Organization Data:\n{context}\n" if context else ""
 
     prompt = f"""
     {ASSISTANT_SYSTEM_PROMPT}
@@ -61,7 +60,7 @@ Assistant: {chat.get('assistant_response', '')}
     User ID: {user_id}
     Role: {role}
     Conversation ID: {conversation_id}
-
+    {context_str}
     User Message:
     {message}
 
@@ -75,25 +74,131 @@ Assistant: {chat.get('assistant_response', '')}
             temperature=0.5
         )
 
+        # Increment message_count atomically and push the new message
         db["conversations"].update_one(
-            {
-                "conversation_id": conversation_id,
-                "user_id": user_id
-            },
+            {"conversation_id": conversation_id, "user_id": user_id},
             {
                 "$push": {
                     "messages": {
                         "user_message": message,
                         "assistant_response": response
                     }
-                }
+                },
+                "$inc": {"message_count": 1}
             }
         )
 
-        return response
+        new_message_count = message_count + 1
+        updated_title: str | None = None
+        import asyncio
+
+        is_first_message = (message_count == 0) or (existing_title in ("New Conversation", "", None))
+
+        if is_first_message:
+            # Synchronous await on first message: title must be ready before we return
+            updated_title = await auto_generate_title(user_id, conversation_id, existing_title)
+        elif new_message_count % 8 == 0:
+            # Topic-shift check every 8 turns — fire-and-forget (non-blocking)
+            asyncio.create_task(auto_generate_title(user_id, conversation_id, existing_title))
+
+        return response, updated_title
 
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_str = str(e)
+        # Detect Gemini / Groq quota-exceeded (HTTP 429) errors and surface a clean message
+        if "429" in error_str or "quota" in error_str.lower() or "RESOURCE_EXHAUSTED" in error_str or "rate limit" in error_str.lower():
+            return "__QUOTA_EXCEEDED__", None
+        return f"Error: {error_str}", None
+
+
+async def auto_generate_title(
+    user_id: Union[str, int],
+    conversation_id: str,
+    existing_title: str = "New Conversation"
+) -> str | None:
+    """
+    Generates or updates the conversation title using the LLM.
+    Returns the new title string if it changed, or None if unchanged.
+    """
+    try:
+        conv = db["conversations"].find_one(
+            {"conversation_id": conversation_id, "user_id": user_id}
+        )
+        if not conv:
+            return None
+
+        messages = conv.get("messages", [])
+        if not messages:
+            return None
+
+        # Build a compact conversation summary (last 6 turns max to keep prompt lean)
+        history_lines = []
+        for msg in messages[-6:]:
+            u = msg.get('user_message', '').strip()
+            a = msg.get('assistant_response', '').strip()
+            if u:
+                history_lines.append(f"User: {u}")
+            if a:
+                # Truncate long assistant responses to keep prompt compact
+                history_lines.append(f"Assistant: {a[:300]}{'...' if len(a) > 300 else ''}")
+        history_str = "\n".join(history_lines)
+
+        prompt = f"""You are an expert at generating concise, professional conversation titles — similar to ChatGPT, Claude, or Notion AI.
+
+Analyze the conversation below and generate the best possible title.
+
+Rules:
+- 3 to 8 words only
+- Use Title Case capitalization
+- Capture the PRIMARY intent/topic, not just keywords
+- For HRMS topics: use names like "Employee Attendance Analytics", "Payroll Slip Request", "Leave Balance Overview"
+- For bugs/fixes: include the affected feature, e.g. "Notification Popup Position Fix"
+- For UI/design: e.g. "Dashboard Hero Redesign", "Earth Animation Improvements"
+- NEVER use: "New Chat", "Conversation", "Untitled", "Chat", "New Conversation"
+- Current title: "{existing_title}"
+- If the current title already accurately describes the conversation's main topic, OR if messages are just minor follow-up clarifications on the same topic, return EXACTLY: {existing_title}
+- Only update if this is the first real message, or if the topic has clearly and substantially shifted
+- Output ONLY the final title. No quotes, no punctuation, no markdown, no explanation.
+
+Conversation:
+{history_str}
+
+Title:"""
+
+        raw = generate_chat_completion(
+            prompt,
+            model="llama-3.3-70b-versatile",
+            temperature=0.1
+        )
+
+        new_title = raw.strip().strip('"').strip("'").strip("`").strip()
+
+        # Strip any LLM preamble like "Title: ..."
+        if ":" in new_title:
+            parts = new_title.split(":", 1)
+            if parts[0].strip().lower() in ("title", "proposed title", "new title", "conversation title"):
+                new_title = parts[1].strip().strip('"').strip("'").strip()
+
+        # Clamp length and reject obviously bad outputs
+        if not new_title or len(new_title) > 80:
+            return None
+        generic = {"new conversation", "new chat", "conversation", "untitled", "chat", "assistant"}
+        if new_title.lower() in generic:
+            return None
+
+        if new_title and new_title != existing_title:
+            db["conversations"].update_one(
+                {"conversation_id": conversation_id, "user_id": user_id},
+                {"$set": {"title": new_title}}
+            )
+            print(f"[AI Title] Auto-renamed '{existing_title}' → '{new_title}' (conv: {conversation_id})")
+            return new_title
+
+        return None
+
+    except Exception as e:
+        print(f"[AI Title] Failed to auto-generate title: {str(e)}")
+        return None
 
 
 async def create_new_conversation(

@@ -45,18 +45,20 @@ def assistant_home():
 async def assistant_chat(
     request: ChatRequest
 ):
-    response_text = await get_assistant_response(
+    response_text, updated_title = await get_assistant_response(
         request.user_id,
         request.role,
         request.conversation_id,
-        request.message
+        request.message,
+        request.context or ""
     )
 
     return ChatResponse(
         conversation_id=request.conversation_id,
         role=request.role,
         message_id=str(uuid.uuid4()),
-        response=response_text
+        response=response_text,
+        updated_title=updated_title
     )
 
 

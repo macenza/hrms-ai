@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
     role: UserRole
     conversation_id: str
     message: str
+    context: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -21,6 +22,7 @@ class ChatResponse(BaseModel):
     role: str
     message_id: str
     response: str
+    updated_title: str | None = None
 
 
 class NewConversationRequest(BaseModel):
