@@ -3,7 +3,7 @@ import urllib.parse
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 mongo_uri = os.getenv("MONGO_URI") or "mongodb+srv://macenza:macenza1234@cluster0.z50jiib.mongodb.net/?appName=Cluster0"
 client = MongoClient(mongo_uri)

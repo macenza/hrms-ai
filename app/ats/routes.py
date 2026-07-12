@@ -28,7 +28,7 @@ async def upload_resume(
 
         resume_text = extract_text(file_path)
 
-        analysis = analyze_resume(resume_text)
+        analysis = analyze_resume(resume_text, job_title=position)
 
         document = {
             "name": name,
@@ -89,8 +89,11 @@ async def screen_resume(body: dict = Body(...)):
         if not os.path.exists(file_path):
             return {"success": False, "error": f"File does not exist: {file_path}"}
             
+        job_title = body.get("job_title", "")
+        job_description = body.get("job_description", "")
+        
         resume_text = extract_text(file_path)
-        analysis = analyze_resume(resume_text)
+        analysis = analyze_resume(resume_text, job_title=job_title, job_description=job_description)
         return {"success": True, "analysis": analysis}
     except Exception as e:
         return {"success": False, "error": str(e)}
