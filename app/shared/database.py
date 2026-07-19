@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
-mongo_uri = os.getenv("MONGO_URI") or "mongodb+srv://macenza:macenza1234@cluster0.z50jiib.mongodb.net/?appName=Cluster0"
+mongo_uri = os.getenv("MONGO_URI")
+if not mongo_uri or mongo_uri.strip() == "":
+    raise ValueError("MONGO_URI is not defined in hrms-ai/.env or environment variables. Please check your configuration.")
 client = MongoClient(mongo_uri)
 
 db_name = "hrms"
